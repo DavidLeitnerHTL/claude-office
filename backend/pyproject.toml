@@ -5,12 +5,12 @@ description = "Real-time pixel art visualization of Claude Code operations"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.141.1",
-    "uvicorn[standard]>=0.53.0",
-    "websockets>=17.1",
-    "sqlalchemy>=2.0.52",
-    "pydantic>=2.13.5",
-    "pydantic-settings>=2.15.0",
+    "fastapi>=0.143.2",
+    "uvicorn[standard]>=0.54.0",
+    "websockets>=17.2",
+    "sqlalchemy>=2.1.4",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.0",
     "python-multipart>=0.0.32",
     "httpx>=0.28.1",
     "aiosqlite>=0.22.1",
@@ -23,9 +23,9 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
-    "ruff>=0.16.7",
+    "ruff>=0.17.1",
     "pyright>=1.1.414",
-    "pre-commit>=4.6.2",
+    "pre-commit>=4.7.0",
 ]
 
 [build-system]
@@ -77,13 +77,13 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
     "pytest-timeout>=2.4.0",
-    "ruff>=0.16.7",
-    "pre-commit>=4.6.2",
+    "ruff>=0.17.1",
+    "pre-commit>=4.7.0",
     # ARC-010: contract test imports hooks' event_mapper, which depends on
     # defusedxml for <task-notification> parsing. Test-only; not a runtime dep.
     "defusedxml>=0.7.1",
     # Stub-only peer dep for Starlette/FastAPI TestClient typing (pyright).
     # NOT unused: removing it makes `make typecheck` fail on TestClient.get/post
     # in the test suite. Kept intentionally. (Re-evaluates ARC-022's "unused" call.)
-    "httpx2>=2.13.0",
+    "httpx2>=2.13.1",
 ]

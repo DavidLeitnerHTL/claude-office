@@ -81,11 +81,16 @@ export function useSessions(
     return null;
   }, []);
 
-  // Fetch sessions on mount and periodically.
+  // Fetch sessions on mount and periodically. The first fetch is deferred by a
+  // tick so its loading-state update does not render synchronously inside the
+  // effect (react-hooks/set-state-in-effect).
   useEffect(() => {
-    fetchSessions();
+    const timeout = setTimeout(fetchSessions, 0);
     const interval = setInterval(fetchSessions, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
   }, [fetchSessions]);
 
   // Listen for session deletion events from WebSocket
@@ -139,16 +144,19 @@ export function useSessions(
         candidates[0],
       );
       if (bestSession) {
-        setSessionId(bestSession.id);
-        showStatus(
-          t("status.connectedTo", {
-            sessionName:
-              bestSession.label ||
-              bestSession.projectName ||
-              bestSession.id.slice(0, 8),
-          }),
-          "info",
-        );
+        const bestSessionId = bestSession.id;
+        const statusText = t("status.connectedTo", {
+          sessionName:
+            bestSession.label ||
+            bestSession.projectName ||
+            bestSession.id.slice(0, 8),
+        });
+        // Deferred by a tick so the switch does not render synchronously
+        // inside the effect (react-hooks/set-state-in-effect).
+        setTimeout(() => {
+          setSessionId(bestSessionId);
+          showStatus(statusText, "info");
+        }, 0);
       }
     }
   }, [sessions, sessionId, showStatus, t]);

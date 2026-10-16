@@ -47,7 +47,9 @@ export function useWebSocketEvents({
   // ---- Domain-tracking refs (read/written by reconcileState) ----
   const processedAgentsRef = useRef<Set<string>>(new Set());
   const currentSessionIdRef = useRef(sessionId);
-  currentSessionIdRef.current = sessionId;
+  useEffect(() => {
+    currentSessionIdRef.current = sessionId;
+  }, [sessionId]);
   // Prevents backend queue state from overwriting the frontend's animated queue
   // after the initial mid-session-join sync.
   const initialQueueSyncDoneRef = useRef<string | null>(null);
@@ -202,26 +204,38 @@ export function useWebSocketEvents({
 
   // ---- WebSocket transport controller (created once, opts synced each render) ----
   const controllerRef = useRef<WebSocketController | null>(null);
-  if (controllerRef.current === null) {
-    const baseUrl = WS_BASE;
-    controllerRef.current = new WebSocketController({
-      sessionId,
-      enabled,
-      baseUrl,
-      onMessage: handleMessage,
-      onReconnectReset: handleReconnectReset,
-      setConnected,
-      setSessionId,
-      isReplaying: () => useGameStore.getState().isReplaying,
-      isCurrentSession: (id) => id === currentSessionIdRef.current,
-    });
-  }
-  // Keep mutable opts fresh so the controller always closes over current state
-  // without re-creating the instance (and churning the socket).
-  controllerRef.current.opts.sessionId = sessionId;
-  controllerRef.current.opts.enabled = enabled;
-  controllerRef.current.opts.onMessage = handleMessage;
-  controllerRef.current.opts.onReconnectReset = handleReconnectReset;
+  useEffect(() => {
+    if (controllerRef.current === null) {
+      const baseUrl = WS_BASE;
+      controllerRef.current = new WebSocketController({
+        sessionId,
+        enabled,
+        baseUrl,
+        onMessage: handleMessage,
+        onReconnectReset: handleReconnectReset,
+        setConnected,
+        setSessionId,
+        isReplaying: () => useGameStore.getState().isReplaying,
+        isCurrentSession: (id) => id === currentSessionIdRef.current,
+      });
+    }
+    // Keep mutable opts fresh so the controller always closes over current state
+    // without re-creating the instance (and churning the socket).
+    const controller = controllerRef.current;
+    if (controller) {
+      controller.opts.sessionId = sessionId;
+      controller.opts.enabled = enabled;
+      controller.opts.onMessage = handleMessage;
+      controller.opts.onReconnectReset = handleReconnectReset;
+    }
+  }, [
+    sessionId,
+    enabled,
+    handleMessage,
+    handleReconnectReset,
+    setConnected,
+    setSessionId,
+  ]);
 
   // ---- Connection lifecycle ----
   useEffect(() => {

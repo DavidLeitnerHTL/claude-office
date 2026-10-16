@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, ReactNode } from "react";
+import { useState, useCallback, ReactNode } from "react";
 import Modal from "./Modal";
 import {
   usePreferencesStore,
@@ -80,9 +80,13 @@ export default function SettingsModal({
   const [buildingDirty, setBuildingDirty] = useState(false);
 
   // Sync tab when initialTab changes (e.g. edit-building request).
-  useEffect(() => {
+  // Adjust-state-during-render pattern: reinitializes from the prop without a
+  // cascading setState-in-effect (react-hooks/set-state-in-effect).
+  const [syncedInitialTab, setSyncedInitialTab] = useState(initialTab);
+  if (syncedInitialTab !== initialTab) {
+    setSyncedInitialTab(initialTab);
     setActiveTab(initialTab);
-  }, [initialTab]);
+  }
 
   const clockType = usePreferencesStore((s) => s.clockType);
   const clockFormat = usePreferencesStore((s) => s.clockFormat);

@@ -157,8 +157,15 @@ export function BuildingTab({
     floors: FloorFormData[];
   } | null>(null);
 
-  // Initialize form from store config.
-  useEffect(() => {
+  // Initialize form from store config — runs on mount and whenever the store
+  // config changes, via the adjust-state-during-render pattern (sentinel starts
+  // undefined so the initial mount also syncs) instead of a cascading
+  // setState-in-effect (react-hooks/set-state-in-effect).
+  const [syncedConfig, setSyncedConfig] = useState<
+    typeof buildingConfig | undefined
+  >(undefined);
+  if (syncedConfig !== buildingConfig) {
+    setSyncedConfig(buildingConfig);
     if (buildingConfig) {
       const name = buildingConfig.buildingName;
       const fl = buildingConfig.floors.map(floorConfigToFormData);
@@ -166,7 +173,7 @@ export function BuildingTab({
       setFloors(fl);
       setInitialData({ buildingName: name, floors: fl });
     }
-  }, [buildingConfig]);
+  }
 
   // Detect dirty state
   useEffect(() => {
