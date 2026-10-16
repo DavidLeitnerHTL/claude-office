@@ -1,6 +1,6 @@
 {
   "name": "opencode-claude-office",
-  "version": "0.24.1",
+  "version": "0.25.0",
   "description": "OpenCode plugin that sends lifecycle events to Claude Office Visualizer",
   "type": "module",
   "main": "dist/index.js",

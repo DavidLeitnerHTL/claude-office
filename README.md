@@ -45,6 +45,12 @@ The application was built with [Next.js](https://nextjs.org/), [PixiJS](https://
 
 ## What's New
 
+### v0.25.0 (October 2026)
+
+- **Docker deployment works end to end** — the compose stack now serves the UI at [http://localhost:8050](http://localhost:8050) with no port configuration: the frontend derives its API/WebSocket origin from the page itself, transcript path translation defaults on, and `make docker-config` points the hooks and the OpenCode plugin at :8050. Thanks [@tcsenpai](https://github.com/tcsenpai) ([PR #61](https://github.com/paulrobello/claude-office/pull/61)).
+- **Session recovery**: sessions opened before the backend (or after a database wipe) now appear automatically on their next event, without resetting a live session's office state. Child OpenCode @agent sessions stay excluded.
+- **New `LOCALHOST_ONLY` setting** (default on; compose disables it in Docker where the loopback boundary is the host port binding) and a full dependency refresh across all five projects. TypeScript stays held at ^6.0.3 and frontend ESLint at 9.x.
+
 ### v0.24.1 (July 2026)
 
 - **Bug fix — API URL env vars now respected everywhere.** The floor-config hook (`useFloorConfig.ts`) and the simulation scripts (`scripts/scenarios/_base.py`) hardcoded `http://localhost:8000`, so they silently broke when the backend ran on another port (e.g. 8000 was already in use). They now read `NEXT_PUBLIC_API_URL` and `CLAUDE_OFFICE_API_URL` like the rest of the stack; standard-port defaults are unchanged. Thanks [@rasulboliev](https://github.com/rasulboliev) ([PR #55](https://github.com/paulrobello/claude-office/pull/55)).
@@ -288,7 +294,8 @@ The plugin maps OpenCode events to claude-office backend events:
 | Command | Description |
 |---------|-------------|
 | `make docker-build` | Build Docker image |
-| `make docker-up` | Start container in background |
+| `make docker-up` | Start container in background (UI at [http://localhost:8050](http://localhost:8050)) |
+| `make docker-config` | Point the hooks/plugin at the Docker-published port |
 | `make docker-down` | Stop container |
 | `make docker-logs` | View container logs |
 

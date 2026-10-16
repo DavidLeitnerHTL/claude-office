@@ -4,6 +4,15 @@ All notable changes to Claude Office Visualizer are documented here.
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-10-16
+
+### Added
+
+- **Docker deployment works end to end** ([PR #61](https://github.com/paulrobello/claude-office/pull/61), thanks [@tcsenpai](https://github.com/tcsenpai)). The compose stack now serves the UI at [http://localhost:8050](http://localhost:8050); the frontend derives its REST/WS origin from the page itself so the port never needs configuring (explicit `NEXT_PUBLIC_API_URL`/`NEXT_PUBLIC_WS_URL` still win, and `next dev` still targets :8000 on any dev port). The compose healthcheck probes the backend's real port, and the loopback boundary moved to the host port binding via the new `LOCALHOST_ONLY` setting (code default `1`; compose sets `0` — the backend logs a warning when disabled, and other containers on the same Docker network can then reach the API unauthenticated). Transcript path translation is on by default (`CLAUDE_PATH_HOST` defaults to `$HOME/.claude`), so token usage and summaries work out of the box.
+- **Backend-authoritative session-start recovery.** A session whose real `session_start` never reached the backend (office started late, backend restarted with a wiped DB) gets a synthetic one carrying `source: "recovered"`, persisted *without* the destructive history wipe a real `session_start` performs, and without resetting a live session's office state. The OpenCode plugin tags its events `source: "opencode"` so child @agent sessions — which start without a `session_start` by design — stay out of the sidebar.
+- **`make docker-config`** points the Claude Code hooks and the OpenCode plugin at the Docker-published port by writing `CLAUDE_OFFICE_API_URL` to the shared `~/.claude/claude-office-config.env` (both producers now read it, with the env var taking precedence).
+- **Full dependency refresh** across all five projects plus GitHub Actions. TypeScript stays held at ^6.0.3 and frontend ESLint at 9.x (typescript-eslint has no TS 7 support yet; eslint-plugin-react peers only to ESLint 9) — documented in `frontend/package.json`.
+
 ## [0.24.1] - 2026-07-21
 
 ### Fixed
