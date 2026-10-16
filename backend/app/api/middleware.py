@@ -37,7 +37,7 @@ class LocalhostOnlyMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
         client_host = request.client.host if request.client else None
-        if client_host not in _LOCALHOST_HOSTS:
+        if settings.LOCALHOST_ONLY and client_host not in _LOCALHOST_HOSTS:
             return JSONResponse(
                 status_code=403,
                 content={"detail": "Access denied: localhost only"},

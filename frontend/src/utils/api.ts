@@ -6,8 +6,25 @@
  * console; initApiKeyFromBrowser captures it into sessionStorage.
  */
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+/**
+ * Backend origin. Explicit env wins; otherwise derive from the page itself:
+ * `next dev` talks to the backend on :8000 regardless of the port Next picked
+ * (3000 may be taken and auto-incremented); built output (Docker,
+ * SERVE_STATIC) is same-origin so the port never needs configuring.
+ */
+function backendOrigin(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window === "undefined") return "http://localhost:8000";
+  const { protocol, hostname, origin } = window.location;
+  if (process.env.NODE_ENV === "development") {
+    return `${protocol}//${hostname}:8000`;
+  }
+  return origin;
+}
+
+export const API_BASE = backendOrigin();
+export const WS_BASE =
+  process.env.NEXT_PUBLIC_WS_URL || API_BASE.replace(/^http/, "ws");
 
 const KEY_STORAGE = "claude-office-api-key";
 
