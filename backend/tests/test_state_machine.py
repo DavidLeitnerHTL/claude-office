@@ -111,8 +111,8 @@ class TestToGameState:
         sm = StateMachine()
         from app.models.agents import Agent
 
-        # Add 10 agents (more than MAX_AGENTS=8)
-        for i in range(10):
+        # Add more agents than MAX_AGENTS
+        for i in range(StateMachine.MAX_AGENTS + 2):
             sm.agents[f"agent{i}"] = Agent(
                 id=f"agent{i}",
                 name=f"Test{i}",

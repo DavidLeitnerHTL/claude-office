@@ -545,7 +545,7 @@ class StateMachine:
     broadcasting but should not set core state fields directly.
     """
 
-    MAX_AGENTS = 8
+    MAX_AGENTS = 24  # raised from 8 for the DeepSeek swarm (23 parallel workers)
     MAX_CONTEXT_TOKENS = 200_000
     MAX_CONVERSATION_ENTRIES = 500
     # Desk grid shape — keep in sync with frontend/src/constants/positions.ts
