@@ -56,7 +56,7 @@ from app.core.task_persistence import load_tasks, save_tasks
 from app.core.transcript_poller import init_transcript_poller
 from app.db.database import AsyncSessionLocal
 from app.db.models import EventRecord, SessionRecord
-from app.models.agents import AgentState
+from app.models.agents import AgentRecord, AgentState
 from app.models.common import TodoItem
 from app.models.events import (
     AgentEvent,
@@ -361,6 +361,15 @@ class EventProcessor:
         if sm:
             return sm.to_game_state(session_id)
         return None
+
+    async def get_agent_record(self, session_id: str, agent_id: str) -> AgentRecord | None:
+        """Return a copy of one roster record, restoring the session from DB if needed."""
+        if session_id not in self.sessions:
+            await self._restore_session(session_id)
+        sm = self.sessions.get(session_id)
+        if sm is None:
+            return None
+        return sm.roster.view(agent_id, sm.agents.get(agent_id))
 
     async def get_project_root(self, session_id: str) -> str | None:
         """Get the cached project_root for a session from the database.
@@ -887,6 +896,7 @@ class EventProcessor:
                                 if agent.native_id == native_agent_id or agent.native_id is None:
                                     if native_agent_id and agent.native_id is None:
                                         agent.native_id = native_agent_id
+                                    sm.roster.attach_transcript(agent.id, transcript_path)
                                     if (
                                         not agent.current_task
                                         or agent.current_task == "Resumed mid-session"

@@ -17,8 +17,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
 from app.models.agents import (  # noqa: E402  # type: ignore[import]
     Agent,
+    AgentDetail,
+    AgentRecord,
+    AgentTranscript,
+    AgentUsage,
     Boss,
     OfficeState,
+    ToolActivity,
+    TranscriptEntry,
 )
 from app.models.common import (  # noqa: E402  # type: ignore[import]
     BubbleContent,
@@ -62,6 +68,12 @@ MODELS = [
     Agent,
     Boss,
     OfficeState,
+    ToolActivity,
+    AgentUsage,
+    AgentRecord,
+    TranscriptEntry,
+    AgentTranscript,
+    AgentDetail,
     BubbleContent,
     SpeechContent,
     TodoItem,

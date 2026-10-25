@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from enum import Enum, auto
 from typing import Any, cast
 
+from app.core.agent_roster import AgentRoster
 from app.core.path_utils import compress_path, compress_paths_in_text, truncate_long_words
 from app.core.quotes import get_random_job_completion_quote
 from app.core.summary_service import get_summary_service
@@ -251,22 +252,29 @@ def _handle_pre_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
             sm.boss_bubble = bubble
             sm.boss_state = BossState.WORKING
         else:
-            if agent_id not in sm.agents and len(sm.agents) < sm.MAX_AGENTS:
-                new_agent = sm.create_agent(
-                    AgentEventData(
-                        agent_id=agent_id,
-                        agent_name=f"Ghost {agent_id[-4:]}",
-                        task_description="Resumed mid-session",
-                    )
+            # Roster agents without a desk (office full) or already gone stay
+            # off the floor; only truly unknown ids become ghost characters.
+            if (
+                agent_id not in sm.agents
+                and agent_id not in sm.roster
+                and len(sm.agents) < sm.MAX_AGENTS
+            ):
+                ghost_data = AgentEventData(
+                    agent_id=agent_id,
+                    agent_name=f"Ghost {agent_id[-4:]}",
+                    task_description="Resumed mid-session",
                 )
+                new_agent = sm.create_agent(ghost_data)
                 new_agent.state = AgentState.WORKING
                 sm.agents[agent_id] = new_agent
+                sm.roster.record_start(ghost_data, event.timestamp, new_agent)
 
             if agent_id in sm.agents:
                 sm.agents[agent_id].bubble = bubble
                 sm.agents[agent_id].state = AgentState.WORKING
                 if agent_id in sm.arrival_queue:
                     sm.arrival_queue.remove(agent_id)
+            sm.roster.record_tool(agent_id, tool_name or "Tool", bubble.text, event.timestamp)
 
 
 def _handle_user_prompt_submit(sm: "StateMachine", event: AnyEvent) -> None:
@@ -313,8 +321,10 @@ def _handle_post_tool_use(sm: "StateMachine", event: AnyEvent) -> None:
     agent_id = event.data.agent_id or "main"
     if agent_id == "main":
         sm.boss_state = BossState.IDLE
-    elif agent_id in sm.agents and sm.agents[agent_id].state == AgentState.WAITING_PERMISSION:
-        sm.agents[agent_id].state = AgentState.WORKING
+    else:
+        if agent_id in sm.agents and sm.agents[agent_id].state == AgentState.WAITING_PERMISSION:
+            sm.agents[agent_id].state = AgentState.WORKING
+        sm.roster.record_activity(agent_id, event.timestamp)
 
     sm.tool_uses_since_compaction += 1
     sm.whiteboard.track_tool_use(event)
@@ -328,13 +338,19 @@ def _handle_subagent_start(sm: "StateMachine", event: AnyEvent) -> None:
             f"SUBAGENT_START guard failed: missing agent_id (agent_id={event.data.agent_id})"
         )
         return
+    if event.data.agent_id in sm.agents:
+        # Duplicate start (e.g. a retried hook): keep the character, refresh metadata.
+        sm.roster.record_start(event.data, event.timestamp, sm.agents[event.data.agent_id])
+        return
     if len(sm.agents) >= sm.MAX_AGENTS:
         logger.warning(
-            f"SUBAGENT_START guard failed: MAX_AGENTS reached "
-            f"({len(sm.agents)}/{sm.MAX_AGENTS}), agent_id={event.data.agent_id}"
+            f"SUBAGENT_START: office full ({len(sm.agents)}/{sm.MAX_AGENTS}), "
+            f"agent_id={event.data.agent_id} waits in the roster for a free desk"
         )
+        sm.roster.record_start(event.data, event.timestamp, None)
         return
     agent = sm.create_agent(event.data)
+    sm.roster.record_start(event.data, event.timestamp, agent)
     sm.boss_state = BossState.DELEGATING
     sm.elevator_state = ElevatorState.OPEN
 
@@ -380,6 +396,23 @@ def _handle_subagent_stop(sm: "StateMachine", event: AnyEvent) -> None:
 
         agent_name = stopping_agent.name or f"Agent-{agent_id[-4:]}"
         sm.whiteboard.add_news_item("agent", f"{agent_name} completed their task!")
+        sm.roster.record_stop(agent_id, event.data, event.timestamp)
+    elif event.data.agent_id and event.data.agent_id in sm.roster:
+        # Agent finished while still waiting for a desk: only its record exists.
+        sm.roster.record_stop(event.data.agent_id, event.data, event.timestamp)
+
+
+def _handle_agent_update(sm: "StateMachine", event: AnyEvent) -> None:
+    """Handle AGENT_UPDATE: activity, model-queue state, usage and result metadata."""
+    assert isinstance(event, AgentEvent)
+    agent_id = event.data.agent_id
+    if not agent_id:
+        return
+    sm.roster.apply_update(agent_id, event.data, event.timestamp)
+    # Any sign of life means the agent made it to its desk. Producers without
+    # tool hooks (e.g. text-only DeepSeek workers) never send PRE_TOOL_USE.
+    if event.data.queued is None and agent_id in sm.arrival_queue:
+        sm.arrival_queue.remove(agent_id)
 
 
 def _handle_cleanup(sm: "StateMachine", event: AnyEvent) -> None:
@@ -490,6 +523,7 @@ _DISPATCH_TABLE: dict[EventType, Callable[["StateMachine", AnyEvent], None]] = {
     EventType.POST_TOOL_USE: _handle_post_tool_use,
     EventType.SUBAGENT_START: _handle_subagent_start,
     EventType.SUBAGENT_STOP: _handle_subagent_stop,
+    EventType.AGENT_UPDATE: _handle_agent_update,
     EventType.CLEANUP: _handle_cleanup,
     EventType.STOP: _handle_stop,
     EventType.SESSION_END: _handle_session_end,
@@ -545,7 +579,9 @@ class StateMachine:
     broadcasting but should not set core state fields directly.
     """
 
-    MAX_AGENTS = 24  # raised from 8 for the DeepSeek swarm (23 parallel workers)
+    # Desks on the floor. The office grows in rows of DESKS_PER_ROW; agents
+    # beyond this cap wait in the roster until a desk frees up.
+    MAX_AGENTS = 48
     MAX_CONTEXT_TOKENS = 200_000
     MAX_CONVERSATION_ENTRIES = 500
     # Desk grid shape — keep in sync with frontend/src/constants/positions.ts
@@ -575,6 +611,7 @@ class StateMachine:
     last_user_prompt: str | None = None
     background_tasks: list[BackgroundTask] = field(default_factory=_empty_background_tasks)
     conversation: list[ConversationEntry] = field(default_factory=_empty_conversation)
+    roster: AgentRoster = field(default_factory=AgentRoster)
 
     # Floor/room assignment for multi-floor building navigation
     floor_id: str | None = None
@@ -634,12 +671,15 @@ class StateMachine:
             bubble=self.boss_bubble,
         )
 
+        # Enough whole rows for the highest occupied desk (desk numbers can
+        # exceed the agent count while an early desk sits empty).
+        highest_desk = max((a.desk or 0 for a in self.agents.values()), default=0)
+        needed = max(len(self.agents), highest_desk)
         desk_count = min(
             self.MAX_AGENTS,
             max(
                 self.MIN_DESK_COUNT,
-                ((len(self.agents) + self.DESKS_PER_ROW - 1) // self.DESKS_PER_ROW)
-                * self.DESKS_PER_ROW,
+                ((needed + self.DESKS_PER_ROW - 1) // self.DESKS_PER_ROW) * self.DESKS_PER_ROW,
             ),
         )
 
@@ -689,6 +729,7 @@ class StateMachine:
             departure_queue=self.handin_queue.copy(),
             whiteboard_data=whiteboard_data,
             conversation=self.conversation.copy(),
+            agent_roster=self.roster.snapshot(self.agents),
             floor_id=self.floor_id,
             room_id=self.room_id,
         )
@@ -697,7 +738,8 @@ class StateMachine:
         """Remove an agent from the office and all queues.
 
         Deletes the agent from the agents dict, arrival queue, and
-        handin (departure) queue.
+        handin (departure) queue, then gives the freed desk to the oldest
+        roster agent that is still waiting for one.
 
         Args:
             agent_id: The identifier of the agent to remove.
@@ -708,6 +750,37 @@ class StateMachine:
             self.arrival_queue.remove(agent_id)
         if agent_id in self.handin_queue:
             self.handin_queue.remove(agent_id)
+        self._seat_waiting_agents()
+
+    def _seat_waiting_agents(self) -> None:
+        """Move roster agents that had no desk onto the floor while desks are free."""
+        for waiting_id in self.roster.overflow_ids():
+            if len(self.agents) >= self.MAX_AGENTS:
+                return
+            record = self.roster.get(waiting_id)
+            if record is None:
+                continue
+            agent = self.create_agent(
+                AgentEventData(
+                    agent_id=record.id,
+                    agent_name=record.label,
+                    agent_type=record.agent_type,
+                    task_description=record.task_full,
+                    keep_name=True,
+                )
+            )
+            self.agents[agent.id] = agent
+            if agent.id not in self.arrival_queue:
+                self.arrival_queue.append(agent.id)
+            self.roster.link_agent(agent)
+
+    def _next_free_desk(self) -> int:
+        """Return the lowest desk number not taken by an agent on the floor."""
+        taken = {a.desk for a in self.agents.values() if a.desk is not None}
+        desk = 1
+        while desk in taken:
+            desk += 1
+        return desk
 
     def transition(self, event: AnyEvent) -> None:
         """Process an event and update state accordingly.
@@ -805,13 +878,16 @@ class StateMachine:
         ]
         color = colors[(count - 1) % len(colors)]
 
-        # Generate short name from description using fallback
-        name_source = data.agent_name or data.task_description or ""
-        summary_service = get_summary_service()
-        existing_names = {a.name for a in self.agents.values() if a.name}
-        short_name = summary_service.generate_agent_name_fallback(
-            name_source, existing_names, agent_type=data.agent_type
-        )
+        if data.keep_name and data.agent_name:
+            short_name = data.agent_name
+        else:
+            # Generate short name from description using fallback
+            name_source = data.agent_name or data.task_description or ""
+            summary_service = get_summary_service()
+            existing_names = {a.name for a in self.agents.values() if a.name}
+            short_name = summary_service.generate_agent_name_fallback(
+                name_source, existing_names, agent_type=data.agent_type
+            )
 
         task = data.task_description or data.agent_name or None
 
@@ -821,7 +897,7 @@ class StateMachine:
             color=color,
             number=count,
             state=AgentState.ARRIVING,
-            desk=count,
+            desk=self._next_free_desk(),
             bubble=None,
             current_task=task,
         )

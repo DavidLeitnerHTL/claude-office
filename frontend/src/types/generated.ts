@@ -44,15 +44,47 @@ export type Currenttask = string | null;
 export type Charactertype = string | null;
 export type Parentsessionid = string | null;
 export type Parentid = string | null;
+export type Id1 = string;
+export type Name1 = string;
+export type Label = string;
+export type Color1 = string;
+export type Source = string;
+export type Group = string | null;
+export type Agenttype = string | null;
+export type Model = string | null;
+/**
+ * Lifecycle outcome of a roster entry.
+ */
+export type RosterStatus = "active" | "done" | "failed";
+export type Desk1 = number | null;
+export type Task = string | null;
+export type Startedat = string;
+export type Endedat = string | null;
+export type Lastactivityat = string;
+export type Name2 = string;
+export type Summary = string;
+export type At = string;
+export type Queued = boolean;
+export type Resultsummary = string | null;
+export type Success = boolean | null;
+export type Inputtokens = number | null;
+export type Outputtokens = number | null;
+export type Credits = number | null;
+export type Turns = number | null;
+export type Contextratio = number | null;
+export type Durationms = number | null;
+export type Model1 = string | null;
+export type Hastranscript = boolean;
+export type Fulltask = string | null;
 export type ProjectName = string | null;
 export type ProjectDir = string | null;
 export type WorkingDir = string | null;
-export type Source = string | null;
+export type Source1 = string | null;
 export type AgentId = string | null;
 export type NativeAgentId = string | null;
 export type TranscriptPath = string | null;
 export type AgentTranscriptPath = string | null;
-export type Summary = string | null;
+export type Summary1 = string | null;
 export type Message = string | null;
 export type TeamName = string | null;
 export type TeammateName = string | null;
@@ -69,29 +101,45 @@ export type TaskDescription = string | null;
 export type ResultSummary = string | null;
 export type ToolUseId = string | null;
 export type Thinking = string | null;
-export type Success = boolean | null;
+export type Success1 = boolean | null;
 export type Boss = string | null;
 export type Agent1 = string | null;
 export type BossPhone = string | null;
+export type Model2 = string | null;
+export type AgentGroup = string | null;
+export type KeepName = boolean | null;
+export type IdleTimeoutSeconds = number | null;
+export type Queued1 = boolean | null;
 export type Agentid = string;
 export type Agentname = string;
-export type Color1 = string;
+export type Color2 = string;
 export type Starttime = string;
 export type Endtime = string | null;
+export type Agentid1 = string;
+export type Available = boolean;
+export type Total = number;
+export type Kind = "prompt" | "text" | "thinking" | "tool_use" | "tool_result" | "result";
+export type Text1 = string;
+export type Toolname = string | null;
+export type Tooluseid = string | null;
+export type Iserror = boolean;
+export type Truncated = boolean;
+export type Timestamp = string | null;
+export type Entries = TranscriptEntry[];
 export type Taskid = string;
 export type Status = string;
-export type Summary1 = string | null;
-export type Startedat = string | null;
+export type Summary2 = string | null;
+export type Startedat1 = string | null;
 export type Completedat = string | null;
 export type ProjectName1 = string | null;
 export type ProjectDir1 = string | null;
 export type WorkingDir1 = string | null;
-export type Source1 = string | null;
+export type Source2 = string | null;
 export type AgentId1 = string | null;
 export type NativeAgentId1 = string | null;
 export type TranscriptPath1 = string | null;
 export type AgentTranscriptPath1 = string | null;
-export type Summary2 = string | null;
+export type Summary3 = string | null;
 export type Message1 = string | null;
 export type TeamName1 = string | null;
 export type TeammateName1 = string | null;
@@ -141,17 +189,17 @@ export type Hash = string;
  */
 export type Message2 = string;
 export type Author = string;
-export type Timestamp = string;
+export type Timestamp1 = string;
 /**
  * Human-readable relative time (e.g., '2 hours ago')
  */
 export type RelativeTime = string;
-export type Id1 = string;
+export type Id2 = string;
 export type Role = string;
-export type Agentid1 = string;
-export type Text1 = string;
-export type Timestamp1 = string;
-export type Toolname = string;
+export type Agentid2 = string;
+export type Text2 = string;
+export type Timestamp2 = string;
+export type Toolname1 = string;
 /**
  * Visual states for the elevator.
  *
@@ -190,17 +238,17 @@ export type EventType =
   | "task_completed"
   | "teammate_idle";
 export type SessionId = string;
-export type Timestamp2 = string;
+export type Timestamp3 = string;
 export type ProjectName2 = string | null;
 export type ProjectDir2 = string | null;
 export type WorkingDir2 = string | null;
-export type Source2 = string | null;
+export type Source3 = string | null;
 export type ToolName = string | null;
 export type ToolUseId1 = string | null;
 export type ToolInput = {
   [k: string]: unknown;
 } | null;
-export type Success1 = boolean | null;
+export type Success2 = boolean | null;
 export type AgentId2 = string | null;
 export type NativeAgentId2 = string | null;
 export type AgentName1 = string | null;
@@ -211,7 +259,7 @@ export type NotificationType = string | null;
 export type Message3 = string | null;
 export type ErrorType = string | null;
 export type Reason = string | null;
-export type Summary3 = string | null;
+export type Summary4 = string | null;
 export type Prompt = string | null;
 export type TranscriptPath2 = string | null;
 export type AgentTranscriptPath2 = string | null;
@@ -231,15 +279,20 @@ export type TeamName2 = string | null;
 export type TeammateName2 = string | null;
 export type TaskId = string | null;
 export type TaskSubject = string | null;
+export type Model3 = string | null;
+export type AgentGroup1 = string | null;
+export type KeepName1 = boolean | null;
+export type IdleTimeoutSeconds1 = number | null;
+export type Queued2 = boolean | null;
 export type ProjectName3 = string | null;
 export type ProjectDir3 = string | null;
 export type WorkingDir3 = string | null;
-export type Source3 = string | null;
+export type Source4 = string | null;
 export type AgentId3 = string | null;
 export type NativeAgentId3 = string | null;
 export type TranscriptPath3 = string | null;
 export type AgentTranscriptPath3 = string | null;
-export type Summary4 = string | null;
+export type Summary5 = string | null;
 export type Message4 = string | null;
 export type TeamName3 = string | null;
 export type TeammateName3 = string | null;
@@ -267,11 +320,11 @@ export type Contextutilization = number;
 export type Toolusessincecompaction = number;
 export type Printreport = boolean;
 export type Lastupdated = string;
-export type Id2 = string;
+export type Id3 = string;
 export type Type = string;
-export type Agentid2 = string;
-export type Summary5 = string;
-export type Timestamp3 = string;
+export type Agentid3 = string;
+export type Summary6 = string;
+export type Timestamp4 = string;
 export type History = HistoryEntry[];
 export type TaskId1 = string;
 export type Content = string;
@@ -311,11 +364,12 @@ export type Lastincidenttime = string | null;
 export type Agentlifespans = AgentLifespan[];
 export type Category = string;
 export type Headline = string;
-export type Timestamp4 = string;
+export type Timestamp5 = string;
 export type Newsitems = NewsItem[];
 export type Coffeecups = number;
 export type Backgroundtasks = BackgroundTask[];
 export type Conversation = ConversationEntry[];
+export type Agentroster = AgentRecord[];
 export type Floorid = string | null;
 export type Roomid = string | null;
 /**
@@ -343,12 +397,12 @@ export type RepoPath = string;
 export type ProjectName4 = string | null;
 export type ProjectDir4 = string | null;
 export type WorkingDir4 = string | null;
-export type Source4 = string | null;
+export type Source5 = string | null;
 export type AgentId4 = string | null;
 export type NativeAgentId4 = string | null;
 export type TranscriptPath4 = string | null;
 export type AgentTranscriptPath4 = string | null;
-export type Summary6 = string | null;
+export type Summary7 = string | null;
 export type Message5 = string | null;
 export type TeamName4 = string | null;
 export type TeammateName4 = string | null;
@@ -368,7 +422,7 @@ export type Currenttask2 = string | null;
 export type Tododone = number;
 export type Todototal = number;
 export type Subagentcount = number;
-export type Entries = OverviewEntry[];
+export type Entries1 = OverviewEntry[];
 export type Lastupdated1 = string;
 /**
  * Visual states for the boss's phone.
@@ -380,12 +434,12 @@ export type PhoneState1 = "idle" | "ringing" | "in_use";
 export type ProjectName5 = string | null;
 export type ProjectDir5 = string | null;
 export type WorkingDir5 = string | null;
-export type Source5 = string | null;
+export type Source6 = string | null;
 export type AgentId5 = string | null;
 export type NativeAgentId5 = string | null;
 export type TranscriptPath5 = string | null;
 export type AgentTranscriptPath5 = string | null;
-export type Summary7 = string | null;
+export type Summary8 = string | null;
 export type Message6 = string | null;
 export type TeamName5 = string | null;
 export type TeammateName5 = string | null;
@@ -397,7 +451,14 @@ export type CacheCreationTokens5 = number | null;
 export type FloorId5 = string | null;
 export type RoomId5 = string | null;
 export type Prompt1 = string | null;
-export type Id3 = string;
+/**
+ * Lifecycle outcome of a roster entry.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "RosterStatus".
+ */
+export type RosterStatus1 = "active" | "done" | "failed";
+export type Id4 = string;
 export type CreatedAt = string;
 export type UpdatedAt = string;
 export type Status2 = string;
@@ -406,12 +467,12 @@ export type AgentCount = number;
 export type ProjectName6 = string | null;
 export type ProjectDir6 = string | null;
 export type WorkingDir6 = string | null;
-export type Source6 = string | null;
+export type Source7 = string | null;
 export type AgentId6 = string | null;
 export type NativeAgentId6 = string | null;
 export type TranscriptPath6 = string | null;
 export type AgentTranscriptPath6 = string | null;
-export type Summary8 = string | null;
+export type Summary9 = string | null;
 export type Message7 = string | null;
 export type TeamName6 = string | null;
 export type TeammateName6 = string | null;
@@ -426,12 +487,12 @@ export type Reason2 = string | null;
 export type ProjectName7 = string | null;
 export type ProjectDir7 = string | null;
 export type WorkingDir7 = string | null;
-export type Source7 = string | null;
+export type Source8 = string | null;
 export type AgentId7 = string | null;
 export type NativeAgentId7 = string | null;
 export type TranscriptPath7 = string | null;
 export type AgentTranscriptPath7 = string | null;
-export type Summary9 = string | null;
+export type Summary10 = string | null;
 export type Message8 = string | null;
 export type TeamName7 = string | null;
 export type TeammateName7 = string | null;
@@ -447,12 +508,12 @@ export type TaskSubject1 = string | null;
 export type ProjectName8 = string | null;
 export type ProjectDir8 = string | null;
 export type WorkingDir8 = string | null;
-export type Source8 = string | null;
+export type Source9 = string | null;
 export type AgentId8 = string | null;
 export type NativeAgentId8 = string | null;
 export type TranscriptPath8 = string | null;
 export type AgentTranscriptPath8 = string | null;
-export type Summary10 = string | null;
+export type Summary11 = string | null;
 export type Message9 = string | null;
 export type TeamName8 = string | null;
 export type TeammateName8 = string | null;
@@ -468,7 +529,7 @@ export type ToolUseId2 = string | null;
 export type ToolInput1 = {
   [k: string]: unknown;
 } | null;
-export type Success2 = boolean | null;
+export type Success3 = boolean | null;
 export type ResultSummary2 = string | null;
 export type ErrorType2 = string | null;
 export type Thinking2 = string | null;
@@ -515,6 +576,82 @@ export interface Position {
   [k: string]: number;
 }
 /**
+ * Inspector payload: roster record plus data too large to broadcast.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "AgentDetail".
+ */
+export interface AgentDetail {
+  record: AgentRecord;
+  fullTask?: Fulltask;
+  [k: string]: unknown;
+}
+/**
+ * Roster entry for every subagent seen in a session, live or finished.
+ *
+ * Unlike ``Agent`` (a character on the floor, removed once it leaves), a
+ * record survives the agent's departure so its outcome stays inspectable.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "AgentRecord".
+ */
+export interface AgentRecord {
+  id: Id1;
+  name: Name1;
+  label: Label;
+  color: Color1;
+  source?: Source;
+  group?: Group;
+  agentType?: Agenttype;
+  model?: Model;
+  status?: RosterStatus;
+  state?: AgentState | null;
+  desk?: Desk1;
+  task?: Task;
+  startedAt: Startedat;
+  endedAt?: Endedat;
+  lastActivityAt: Lastactivityat;
+  lastTool?: ToolActivity | null;
+  queued?: Queued;
+  resultSummary?: Resultsummary;
+  success?: Success;
+  usage?: AgentUsage | null;
+  hasTranscript?: Hastranscript;
+  [k: string]: unknown;
+}
+/**
+ * The most recent tool call of an agent.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "ToolActivity".
+ */
+export interface ToolActivity {
+  name: Name2;
+  summary: Summary;
+  at: At;
+  [k: string]: unknown;
+}
+/**
+ * Resource usage of one agent.
+ *
+ * ``input_tokens`` is the latest context size (input + cache), ``output_tokens``
+ * the sum over all replies. Token fields stay ``None`` when the producer does
+ * not report tokens (qodercli reports zeros for DeepSeek-Flash).
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "AgentUsage".
+ */
+export interface AgentUsage {
+  inputTokens?: Inputtokens;
+  outputTokens?: Outputtokens;
+  credits?: Credits;
+  turns?: Turns;
+  contextRatio?: Contextratio;
+  durationMs?: Durationms;
+  model?: Model1;
+  [k: string]: unknown;
+}
+/**
  * Payload for SUBAGENT_START, SUBAGENT_INFO, SUBAGENT_STOP, AGENT_UPDATE, CLEANUP.
  *
  * Note: `agent_transcript_path` is inherited from EventDataBase because
@@ -529,12 +666,12 @@ export interface AgentEventData {
   project_name?: ProjectName;
   project_dir?: ProjectDir;
   working_dir?: WorkingDir;
-  source?: Source;
+  source?: Source1;
   agent_id?: AgentId;
   native_agent_id?: NativeAgentId;
   transcript_path?: TranscriptPath;
   agent_transcript_path?: AgentTranscriptPath;
-  summary?: Summary;
+  summary?: Summary1;
   message?: Message;
   team_name?: TeamName;
   teammate_name?: TeammateName;
@@ -551,9 +688,15 @@ export interface AgentEventData {
   result_summary?: ResultSummary;
   tool_use_id?: ToolUseId;
   thinking?: Thinking;
-  success?: Success;
+  success?: Success1;
   bubble_content?: BubbleContent | null;
   speech_content?: SpeechContent | null;
+  model?: Model2;
+  agent_group?: AgentGroup;
+  keep_name?: KeepName;
+  idle_timeout_seconds?: IdleTimeoutSeconds;
+  agent_usage?: AgentUsage | null;
+  queued?: Queued1;
   [k: string]: unknown;
 }
 /**
@@ -577,9 +720,38 @@ export interface SpeechContent {
 export interface AgentLifespan {
   agentId: Agentid;
   agentName: Agentname;
-  color: Color1;
+  color: Color2;
   startTime: Starttime;
   endTime?: Endtime;
+  [k: string]: unknown;
+}
+/**
+ * Chat log of one agent, newest ``limit`` entries.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "AgentTranscript".
+ */
+export interface AgentTranscript {
+  agentId: Agentid1;
+  available: Available;
+  total?: Total;
+  entries?: Entries;
+  [k: string]: unknown;
+}
+/**
+ * One step of an agent's conversation, flattened for display.
+ *
+ * This interface was referenced by `ClaudeOfficeBackendTypes`'s JSON-Schema
+ * via the `definition` "TranscriptEntry".
+ */
+export interface TranscriptEntry {
+  kind: Kind;
+  text: Text1;
+  toolName?: Toolname;
+  toolUseId?: Tooluseid;
+  isError?: Iserror;
+  truncated?: Truncated;
+  timestamp?: Timestamp;
   [k: string]: unknown;
 }
 /**
@@ -591,8 +763,8 @@ export interface AgentLifespan {
 export interface BackgroundTask {
   taskId: Taskid;
   status: Status;
-  summary?: Summary1;
-  startedAt?: Startedat;
+  summary?: Summary2;
+  startedAt?: Startedat1;
   completedAt?: Completedat;
   [k: string]: unknown;
 }
@@ -606,12 +778,12 @@ export interface BackgroundTaskEventData {
   project_name?: ProjectName1;
   project_dir?: ProjectDir1;
   working_dir?: WorkingDir1;
-  source?: Source1;
+  source?: Source2;
   agent_id?: AgentId1;
   native_agent_id?: NativeAgentId1;
   transcript_path?: TranscriptPath1;
   agent_transcript_path?: AgentTranscriptPath1;
-  summary?: Summary2;
+  summary?: Summary3;
   message?: Message1;
   team_name?: TeamName1;
   teammate_name?: TeammateName1;
@@ -666,7 +838,7 @@ export interface Commit {
   hash: Hash;
   message: Message2;
   author: Author;
-  timestamp: Timestamp;
+  timestamp: Timestamp1;
   relative_time: RelativeTime;
   [k: string]: unknown;
 }
@@ -677,12 +849,12 @@ export interface Commit {
  * via the `definition` "ConversationEntry".
  */
 export interface ConversationEntry {
-  id: Id1;
+  id: Id2;
   role: Role;
-  agentId: Agentid1;
-  text: Text1;
-  timestamp: Timestamp1;
-  toolName?: Toolname;
+  agentId: Agentid2;
+  text: Text2;
+  timestamp: Timestamp2;
+  toolName?: Toolname1;
   [k: string]: unknown;
 }
 /**
@@ -701,7 +873,7 @@ export interface ConversationEntry {
 export interface Event {
   event_type: EventType;
   session_id: SessionId;
-  timestamp?: Timestamp2;
+  timestamp?: Timestamp3;
   data: EventData;
   [k: string]: unknown;
 }
@@ -721,11 +893,11 @@ export interface EventData {
   project_name?: ProjectName2;
   project_dir?: ProjectDir2;
   working_dir?: WorkingDir2;
-  source?: Source2;
+  source?: Source3;
   tool_name?: ToolName;
   tool_use_id?: ToolUseId1;
   tool_input?: ToolInput;
-  success?: Success1;
+  success?: Success2;
   agent_id?: AgentId2;
   native_agent_id?: NativeAgentId2;
   agent_name?: AgentName1;
@@ -736,7 +908,7 @@ export interface EventData {
   message?: Message3;
   error_type?: ErrorType;
   reason?: Reason;
-  summary?: Summary3;
+  summary?: Summary4;
   prompt?: Prompt;
   bubble_content?: BubbleContent | null;
   speech_content?: SpeechContent | null;
@@ -758,6 +930,12 @@ export interface EventData {
   teammate_name?: TeammateName2;
   task_id?: TaskId;
   task_subject?: TaskSubject;
+  model?: Model3;
+  agent_group?: AgentGroup1;
+  keep_name?: KeepName1;
+  idle_timeout_seconds?: IdleTimeoutSeconds1;
+  agent_usage?: AgentUsage | null;
+  queued?: Queued2;
   [k: string]: unknown;
 }
 /**
@@ -773,12 +951,12 @@ export interface EventDataBase {
   project_name?: ProjectName3;
   project_dir?: ProjectDir3;
   working_dir?: WorkingDir3;
-  source?: Source3;
+  source?: Source4;
   agent_id?: AgentId3;
   native_agent_id?: NativeAgentId3;
   transcript_path?: TranscriptPath3;
   agent_transcript_path?: AgentTranscriptPath3;
-  summary?: Summary4;
+  summary?: Summary5;
   message?: Message4;
   team_name?: TeamName3;
   teammate_name?: TeammateName3;
@@ -820,6 +998,7 @@ export interface GameState {
   departureQueue?: Departurequeue;
   whiteboardData?: WhiteboardData;
   conversation?: Conversation;
+  agentRoster?: Agentroster;
   floorId?: Floorid;
   roomId?: Roomid;
   [k: string]: unknown;
@@ -846,11 +1025,11 @@ export interface OfficeState {
  * via the `definition` "HistoryEntry".
  */
 export interface HistoryEntry {
-  id: Id2;
+  id: Id3;
   type: Type;
-  agentId: Agentid2;
-  summary: Summary5;
-  timestamp: Timestamp3;
+  agentId: Agentid3;
+  summary: Summary6;
+  timestamp: Timestamp4;
   detail: Detail;
   [k: string]: unknown;
 }
@@ -926,7 +1105,7 @@ export interface KanbanTask {
 export interface NewsItem {
   category: Category;
   headline: Headline;
-  timestamp: Timestamp4;
+  timestamp: Timestamp5;
   [k: string]: unknown;
 }
 export interface Fileedits {
@@ -959,12 +1138,12 @@ export interface LifecycleEventData {
   project_name?: ProjectName4;
   project_dir?: ProjectDir4;
   working_dir?: WorkingDir4;
-  source?: Source4;
+  source?: Source5;
   agent_id?: AgentId4;
   native_agent_id?: NativeAgentId4;
   transcript_path?: TranscriptPath4;
   agent_transcript_path?: AgentTranscriptPath4;
-  summary?: Summary6;
+  summary?: Summary7;
   message?: Message5;
   team_name?: TeamName4;
   teammate_name?: TeammateName4;
@@ -1005,7 +1184,7 @@ export interface OverviewEntry {
  * via the `definition` "OverviewState".
  */
 export interface OverviewState {
-  entries?: Entries;
+  entries?: Entries1;
   lastUpdated: Lastupdated1;
   [k: string]: unknown;
 }
@@ -1019,12 +1198,12 @@ export interface PromptEventData {
   project_name?: ProjectName5;
   project_dir?: ProjectDir5;
   working_dir?: WorkingDir5;
-  source?: Source5;
+  source?: Source6;
   agent_id?: AgentId5;
   native_agent_id?: NativeAgentId5;
   transcript_path?: TranscriptPath5;
   agent_transcript_path?: AgentTranscriptPath5;
-  summary?: Summary7;
+  summary?: Summary8;
   message?: Message6;
   team_name?: TeamName5;
   teammate_name?: TeammateName5;
@@ -1045,7 +1224,7 @@ export interface PromptEventData {
  * via the `definition` "Session".
  */
 export interface Session {
-  id: Id3;
+  id: Id4;
   created_at: CreatedAt;
   updated_at: UpdatedAt;
   status: Status2;
@@ -1063,12 +1242,12 @@ export interface SessionEventData {
   project_name?: ProjectName6;
   project_dir?: ProjectDir6;
   working_dir?: WorkingDir6;
-  source?: Source6;
+  source?: Source7;
   agent_id?: AgentId6;
   native_agent_id?: NativeAgentId6;
   transcript_path?: TranscriptPath6;
   agent_transcript_path?: AgentTranscriptPath6;
-  summary?: Summary8;
+  summary?: Summary9;
   message?: Message7;
   team_name?: TeamName6;
   teammate_name?: TeammateName6;
@@ -1092,12 +1271,12 @@ export interface TaskEventData {
   project_name?: ProjectName7;
   project_dir?: ProjectDir7;
   working_dir?: WorkingDir7;
-  source?: Source7;
+  source?: Source8;
   agent_id?: AgentId7;
   native_agent_id?: NativeAgentId7;
   transcript_path?: TranscriptPath7;
   agent_transcript_path?: AgentTranscriptPath7;
-  summary?: Summary9;
+  summary?: Summary10;
   message?: Message8;
   team_name?: TeamName7;
   teammate_name?: TeammateName7;
@@ -1122,12 +1301,12 @@ export interface ToolEventData {
   project_name?: ProjectName8;
   project_dir?: ProjectDir8;
   working_dir?: WorkingDir8;
-  source?: Source8;
+  source?: Source9;
   agent_id?: AgentId8;
   native_agent_id?: NativeAgentId8;
   transcript_path?: TranscriptPath8;
   agent_transcript_path?: AgentTranscriptPath8;
-  summary?: Summary10;
+  summary?: Summary11;
   message?: Message9;
   team_name?: TeamName8;
   teammate_name?: TeammateName8;
@@ -1141,7 +1320,7 @@ export interface ToolEventData {
   tool_name?: ToolName1;
   tool_use_id?: ToolUseId2;
   tool_input?: ToolInput1;
-  success?: Success2;
+  success?: Success3;
   result_summary?: ResultSummary2;
   error_type?: ErrorType2;
   thinking?: Thinking2;

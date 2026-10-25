@@ -12,9 +12,19 @@ from pathlib import Path
 from typing import Any, cast
 
 from app.core.path_utils import is_safe_transcript_path
-from app.models.events import AnyEvent
+from app.models.events import AnyEvent, EventType
 
 logger = logging.getLogger(__name__)
+
+_AGENT_LIFECYCLE_EVENTS = frozenset(
+    {
+        EventType.SUBAGENT_START,
+        EventType.SUBAGENT_INFO,
+        EventType.SUBAGENT_STOP,
+        EventType.AGENT_UPDATE,
+        EventType.CLEANUP,
+    }
+)
 
 # Read-sizes used when tail-scanning JSONL files.
 # 20 KB is enough to find the most recent ``usage`` block.
@@ -100,8 +110,13 @@ class TokenTracker:
             )
             return
 
-        # Slow path: parse the JSONL transcript for usage data.
-        transcript_path = event.data.transcript_path or event.data.agent_transcript_path
+        # Slow path: parse the JSONL transcript for usage data. Agent lifecycle
+        # events carry the *subagent's* transcript in agent_transcript_path;
+        # reading it would overwrite the session's context meter with the
+        # subagent's usage, so only their session transcript_path counts.
+        transcript_path = event.data.transcript_path
+        if not transcript_path and event.event_type not in _AGENT_LIFECYCLE_EVENTS:
+            transcript_path = event.data.agent_transcript_path
         if not transcript_path:
             return
 

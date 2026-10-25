@@ -47,6 +47,11 @@ class PolledAgent:
     active_tool_ids: set[str] = field(default_factory=lambda: set[str]())
     last_thinking_hash: int = 0
     last_text_hash: int = 0
+    # Per-agent zombie threshold; None uses ZOMBIE_SUBAGENT_TIMEOUT_SECONDS.
+    # Producers with their own stop event (the DeepSeek swarm) set a longer
+    # one so model-queue waits and long reasoning are not mistaken for a crash.
+    zombie_timeout: timedelta | None = None
+    queued: bool = False
 
 
 class TranscriptPoller(BasePoller[PolledAgent]):
@@ -65,7 +70,13 @@ class TranscriptPoller(BasePoller[PolledAgent]):
         super().__init__()
         self._event_callback = event_callback
 
-    async def start_polling(self, agent_id: str, session_id: str, transcript_path: str) -> None:
+    async def start_polling(
+        self,
+        agent_id: str,
+        session_id: str,
+        transcript_path: str,
+        idle_timeout_seconds: int | None = None,
+    ) -> None:
         """Start polling a subagent's transcript file."""
         settings = get_settings()
         translated_path = settings.translate_path(transcript_path)
@@ -82,6 +93,9 @@ class TranscriptPoller(BasePoller[PolledAgent]):
             agent_id=agent_id,
             session_id=session_id,
             transcript_path=path,
+            zombie_timeout=(
+                timedelta(seconds=idle_timeout_seconds) if idle_timeout_seconds else None
+            ),
         )
         if path.exists():
             agent.file_position = path.stat().st_size
@@ -100,7 +114,7 @@ class TranscriptPoller(BasePoller[PolledAgent]):
         On hard inactivity timeout, removes the state so the loop terminates.
         """
         inactivity = datetime.now(UTC) - state.last_activity
-        zombie_timeout = _zombie_timeout()
+        zombie_timeout = state.zombie_timeout or _zombie_timeout()
 
         # Zombie detection: emit a synthetic SubagentStop so the
         # state machine can clean up the orphaned agent. This
@@ -130,7 +144,7 @@ class TranscriptPoller(BasePoller[PolledAgent]):
         # Hard fallback: if the zombie callback also failed for
         # any reason, eventually stop the loop so we do not poll
         # forever.
-        if inactivity > INACTIVITY_TIMEOUT:
+        if inactivity > max(INACTIVITY_TIMEOUT, zombie_timeout + timedelta(minutes=1)):
             logger.debug(f"Agent {key} timed out due to inactivity")
             async with self._lock:
                 self._sessions.pop(key, None)
@@ -144,7 +158,15 @@ class TranscriptPoller(BasePoller[PolledAgent]):
                 logger.warning(f"Error processing polled event: {e}")
 
     def _build_zombie_stop_event(self, agent: PolledAgent) -> AgentEvent:
-        """Build a synthetic SUBAGENT_STOP for an agent we believe has crashed."""
+        """Build a synthetic SUBAGENT_STOP for an agent we believe has crashed.
+
+        Agents with an explicit idle timeout come from producers that always
+        send their own stop, so silence past that limit means the worker died
+        (e.g. a swarm timeout killed it) and the agent is marked failed.
+        Claude subagents keep the old neutral stop: a long-running tool call
+        can legitimately keep their transcript quiet.
+        """
+        explicit = agent.zombie_timeout is not None
         return AgentEvent(
             event_type=EventType.SUBAGENT_STOP,
             session_id=agent.session_id,
@@ -152,6 +174,13 @@ class TranscriptPoller(BasePoller[PolledAgent]):
             data=AgentEventData(
                 agent_id=agent.agent_id,
                 agent_transcript_path=str(agent.transcript_path),
+                success=False if explicit else None,
+                result_summary=(
+                    "No transcript activity within the idle timeout; the worker "
+                    "presumably stopped without reporting back."
+                    if explicit
+                    else None
+                ),
             ),
         )
 
@@ -212,6 +241,14 @@ class TranscriptPoller(BasePoller[PolledAgent]):
             record_type = record.get("type")
             message: dict[str, Any] = record.get("message", {})
             content_blocks: list[Any] = message.get("content", [])
+
+            if record_type == "system" and record.get("subtype") == "model_queue_status":
+                # qodercli (DeepSeek swarm) reports waits for a free model slot.
+                queued = record.get("status") == "queued"
+                if queued != agent.queued:
+                    agent.queued = queued
+                    events.append(self._create_queue_event(agent, queued))
+                continue
 
             if record_type == "assistant" and message.get("role") == "assistant":
                 for item in content_blocks:
@@ -304,6 +341,15 @@ class TranscriptPoller(BasePoller[PolledAgent]):
                 tool_use_id=tool_use_id,
                 success=not is_error,
             ),
+        )
+
+    def _create_queue_event(self, agent: PolledAgent, queued: bool) -> AgentEvent:
+        """Create an agent update that flags or clears a model-queue wait."""
+        return AgentEvent(
+            event_type=EventType.AGENT_UPDATE,
+            session_id=agent.session_id,
+            timestamp=datetime.now(UTC),
+            data=AgentEventData(agent_id=agent.agent_id, queued=queued),
         )
 
     def _create_thinking_event(self, agent: PolledAgent, thinking_text: str) -> AgentEvent:

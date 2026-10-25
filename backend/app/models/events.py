@@ -11,6 +11,7 @@ from pydantic import (
     field_validator,
 )
 
+from app.models.agents import AgentUsage
 from app.models.common import BubbleContent, SpeechContent
 
 __all__ = [
@@ -124,6 +125,13 @@ class EventData(BaseModel):
     # Task-specific fields
     task_id: str | None = None
     task_subject: str | None = None
+    # Roster metadata (mirrors AgentEventData)
+    model: str | None = None
+    agent_group: str | None = None
+    keep_name: bool | None = None
+    idle_timeout_seconds: int | None = None
+    agent_usage: AgentUsage | None = None
+    queued: bool | None = None
 
 
 class Event(BaseModel):
@@ -261,6 +269,15 @@ class AgentEventData(EventDataBase):
     success: bool | None = None
     bubble_content: BubbleContent | None = None
     speech_content: SpeechContent | None = None
+    # Roster metadata from external producers (e.g. the DeepSeek swarm bridge).
+    # Per-agent usage lives in its own object: the flat input/output token
+    # fields on EventDataBase drive the *session* context meter.
+    model: str | None = None
+    agent_group: str | None = None
+    keep_name: bool | None = None  # show agent_name verbatim, skip AI renaming
+    idle_timeout_seconds: int | None = None  # zombie threshold for this agent
+    agent_usage: AgentUsage | None = None
+    queued: bool | None = None  # waiting for a model slot
 
 
 class LifecycleEventData(EventDataBase):

@@ -4,7 +4,7 @@ from typing import NotRequired, TypedDict, cast
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-from app.models.agents import Agent, Boss, OfficeState
+from app.models.agents import Agent, AgentRecord, Boss, OfficeState
 from app.models.common import TodoItem
 
 __all__ = [
@@ -154,5 +154,6 @@ class GameState(BaseModel):
     conversation: list[ConversationEntry] = Field(
         default_factory=lambda: cast(list[ConversationEntry], [])
     )
+    agent_roster: list[AgentRecord] = Field(default_factory=lambda: cast(list[AgentRecord], []))
     floor_id: str | None = None
     room_id: str | None = None

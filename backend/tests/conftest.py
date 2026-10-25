@@ -98,6 +98,7 @@ def _allow_test_transcript_paths() -> Iterator[None]:  # pyright: ignore[reportU
             "app.core.path_utils.is_safe_transcript_path",
             "app.core.jsonl_parser.is_safe_transcript_path",
             "app.core.transcript_poller.is_safe_transcript_path",
+            "app.core.agent_transcript.is_safe_transcript_path",
             "app.core.handlers.conversation_handler.is_safe_transcript_path",
         ):
             stack.enter_context(patch(target, return_value=True))

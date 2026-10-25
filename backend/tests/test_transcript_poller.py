@@ -276,3 +276,68 @@ class TestTranslatedPathPolling:
                 assert state.transcript_path == translated
             finally:
                 await poller.stop_polling("agentX")
+
+
+class TestSwarmWorkerPolling:
+    """qodercli stream-json transcripts written by the DeepSeek swarm."""
+
+    @pytest.mark.asyncio
+    async def test_model_queue_status_emits_queue_updates_on_change(self) -> None:
+        callback = AsyncMock()
+        poller = TranscriptPoller(callback)
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            temp_path = f.name
+
+        try:
+            with patch("app.core.transcript_poller.POLL_INTERVAL_SECONDS", TEST_POLL_INTERVAL):
+                await poller.start_polling("ds1", "session1", temp_path)
+                await asyncio.sleep(0.05)
+                with open(temp_path, "a", encoding="utf-8") as f:
+                    for status in ("queued", "queued", "ready"):
+                        record = {
+                            "type": "system",
+                            "subtype": "model_queue_status",
+                            "status": status,
+                        }
+                        f.write(json.dumps(record) + "\n")
+                await asyncio.sleep(0.3)
+                await poller.stop_polling("ds1")
+
+            flags = [
+                call[0][0].data.queued
+                for call in callback.call_args_list
+                if call[0][0].event_type == EventType.AGENT_UPDATE
+            ]
+            assert flags == [True, False]  # repeated "queued" is collapsed
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+
+    @pytest.mark.asyncio
+    async def test_explicit_idle_timeout_stops_worker_as_failed(self) -> None:
+        callback = AsyncMock()
+        poller = TranscriptPoller(callback)
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            temp_path = f.name
+
+        try:
+            with patch("app.core.transcript_poller.POLL_INTERVAL_SECONDS", TEST_POLL_INTERVAL):
+                await poller.start_polling("ds2", "session1", temp_path, idle_timeout_seconds=1)
+                state = poller._sessions["ds2"]
+                from datetime import UTC, datetime, timedelta
+
+                state.last_activity = datetime.now(UTC) - timedelta(seconds=5)
+                await asyncio.sleep(0.3)
+                await poller.stop_polling("ds2")
+
+            stops = [
+                call[0][0]
+                for call in callback.call_args_list
+                if call[0][0].event_type == EventType.SUBAGENT_STOP
+            ]
+            assert len(stops) == 1
+            assert stops[0].data.success is False
+            assert stops[0].data.result_summary
+        finally:
+            Path(temp_path).unlink(missing_ok=True)

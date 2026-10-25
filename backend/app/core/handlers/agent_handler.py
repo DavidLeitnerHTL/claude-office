@@ -15,6 +15,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from app.core.agent_transcript import resolve_transcript, summarize_usage
 from app.core.broadcast_service import broadcast_state
 from app.core.jsonl_parser import get_first_user_prompt, get_last_assistant_response
 from app.core.state_machine import StateMachine, resolve_agent_for_stop
@@ -80,14 +81,19 @@ async def handle_subagent_start(
 
     if agent_id in sm.agents:
         existing = {a.name for aid, a in sm.agents.items() if aid != agent_id and a.name}
-        await enrich_agent_with_summaries(sm.agents[agent_id], event.data, existing)
-        # Propagate enriched short name to the lifespan record.
+        await enrich_agent_with_summaries(
+            sm.agents[agent_id], event.data, existing, rename=not event.data.keep_name
+        )
+        # Propagate enriched short name to the lifespan and roster records.
         enriched_name = sm.agents[agent_id].name
         if enriched_name:
             for lifespan in sm.whiteboard.agent_lifespans:
                 if lifespan.agent_id == agent_id:
                     lifespan.agent_name = enriched_name
                     break
+            record = sm.roster.get(agent_id)
+            if record is not None:
+                record.name = enriched_name
 
     await broadcast_state(event.session_id, sm)
 
@@ -99,7 +105,15 @@ async def handle_subagent_start(
         ensure_transcript_poller_fn()
         poller = get_transcript_poller()
         if poller:
-            await poller.start_polling(agent_id, event.session_id, transcript_path)
+            await poller.start_polling(
+                agent_id,
+                event.session_id,
+                transcript_path,
+                idle_timeout_seconds=event.data.idle_timeout_seconds,
+            )
+
+    if agent_id not in sm.agents:
+        return  # waiting in the roster for a free desk
 
     await update_agent_state_fn(event.session_id, agent_id, AgentState.WALKING_TO_DESK)
     # Boss returns to IDLE after the agent starts walking to desk.
@@ -159,6 +173,7 @@ async def handle_subagent_info(
             # Link and enrich agents that have not yet been assigned a native_id.
             if agent.native_id is None:
                 agent.native_id = native_agent_id
+                sm.roster.attach_transcript(agent_id, transcript_path)
                 logger.info(f"Linked agent {agent_id} to native ID {native_agent_id}")
                 await enrich_agent_from_transcript(
                     agent,
@@ -177,6 +192,7 @@ async def handle_subagent_info(
     # Also enrich the freshly synthesised agent (its native_id was already set
     # by sm.transition above, so the loop above skips it via the None guard).
     synth_id = f"subagent_{native_agent_id}"
+    sm.roster.attach_transcript(synth_id, transcript_path)
     synth_agent = sm.agents.get(synth_id)
     if synth_agent and not synth_agent.current_task:
         await enrich_agent_from_transcript(
@@ -212,6 +228,15 @@ async def handle_subagent_stop(
     )
 
     if not resolved:
+        roster_id = event.data.agent_id
+        if roster_id and roster_id in sm.roster:
+            # Finished before it ever got a desk: no character to walk out.
+            poller = get_transcript_poller()
+            if poller:
+                await poller.stop_polling(roster_id)
+            await _finalize_record(sm, event, roster_id, None, persist_synthetic_event_fn)
+            await broadcast_state(event.session_id, sm)
+            return
         logger.warning(
             f"SUBAGENT_STOP for unknown agent "
             f"(agent_id={event.data.agent_id}, native_agent_id={event.data.native_agent_id}), "
@@ -241,7 +266,10 @@ async def handle_subagent_stop(
     if poller:
         await poller.stop_polling(resolved_agent_id)
 
-    await extract_and_set_agent_speech(sm, resolved_agent_id, event.data.agent_transcript_path)
+    summary = await extract_and_set_agent_speech(
+        sm, resolved_agent_id, event.data.agent_transcript_path
+    )
+    await _finalize_record(sm, event, resolved_agent_id, summary, persist_synthetic_event_fn)
 
     await broadcast_state(event.session_id, sm)
 
@@ -250,6 +278,37 @@ async def handle_subagent_stop(
     cleanup_data = AgentEventData(agent_id=resolved_agent_id)
     await persist_synthetic_event_fn(event.session_id, EventType.CLEANUP, cleanup_data)
     await broadcast_state(event.session_id, sm)
+
+
+async def _finalize_record(
+    sm: StateMachine,
+    event: AgentEvent,
+    agent_id: str,
+    summary: str | None,
+    persist_synthetic_event_fn: PersistSyntheticEventFn,
+) -> None:
+    """Fill in usage and a result summary the producer did not send.
+
+    Claude subagents report neither, so both come from the transcript. The
+    values are also persisted as a synthetic AGENT_UPDATE so a replayed
+    session shows the same outcome.
+    """
+    record = sm.roster.get(agent_id)
+    if record is None:
+        return
+
+    usage = None
+    if event.data.agent_usage is None:
+        path = resolve_transcript(event.data.agent_transcript_path or record.transcript_path)
+        if path is not None:
+            usage = await asyncio.to_thread(summarize_usage, path)
+    result_summary = None if record.result_summary else summary
+    if usage is None and not result_summary:
+        return
+
+    update = AgentEventData(agent_id=agent_id, agent_usage=usage, result_summary=result_summary)
+    sm.roster.apply_update(agent_id, update, event.timestamp)
+    await persist_synthetic_event_fn(event.session_id, EventType.AGENT_UPDATE, update)
 
 
 async def handle_agent_update(
@@ -278,6 +337,7 @@ async def enrich_agent_with_summaries(
     agent: Agent,
     event_data: AgentEventData,
     existing_names: set[str] | None = None,
+    rename: bool = True,
 ) -> None:
     """Generate a short agent name and task summary using the AI summary service.
 
@@ -285,6 +345,7 @@ async def enrich_agent_with_summaries(
         agent: The agent to enrich in-place.
         event_data: Event payload containing name/task hints.
         existing_names: Names already in use by other agents, for deduplication.
+        rename: False keeps the producer-given name (e.g. swarm worker ids).
     """
     summary_service = get_summary_service()
 
@@ -293,7 +354,7 @@ async def enrich_agent_with_summaries(
     )
     task_source = event_data.task_description or event_data.agent_name or ""
 
-    if name_source:
+    if name_source and rename:
         agent.name = await summary_service.generate_agent_name(
             name_source, existing_names, agent_type=event_data.agent_type
         )
@@ -354,16 +415,19 @@ async def extract_and_set_agent_speech(
     sm: StateMachine,
     agent_id: str,
     transcript_path: str | None,
-) -> None:
+) -> str | None:
     """Extract an agent's last response from transcript and set its speech bubble.
 
     Args:
         sm: The StateMachine for this session.
         agent_id: The agent whose bubble should be updated.
         transcript_path: Path to the JSONL transcript, or None.
+
+    Returns:
+        The summarized response, or None when nothing could be extracted.
     """
     if not transcript_path or agent_id not in sm.agents:
-        return
+        return None
 
     from app.config import get_settings  # local import to avoid cycles
 
@@ -372,7 +436,7 @@ async def extract_and_set_agent_speech(
 
     response = await asyncio.to_thread(get_last_assistant_response, translated_path)
     if not response:
-        return
+        return None
 
     summary_service = get_summary_service()
     summary = await summary_service.summarize_response(response)
@@ -384,3 +448,4 @@ async def extract_and_set_agent_speech(
             icon="✅",
         )
         logger.debug(f"Set agent {agent_id} completion summary: {summary[:50]}...")
+    return summary or None
