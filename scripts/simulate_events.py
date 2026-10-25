@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Simulation entry point for the Claude Office Visualizer.
 
-Runs one of five pre-built scenarios against the backend API:
+Runs one of six pre-built scenarios against the backend API:
 
   basic       Simple agent spawn/complete (~60 s)
   complex     Multi-agent workflow with context compaction (~5-10 min) [default]
   edge_cases  Error handling, permissions, orphan cleanup (~2 min)
   quick       Fast (~30 s) full-lifecycle smoke scenario
   teams       Multi-session team scenario (room-orchestrator merge path)
+  swarm       12 parallel DeepSeek-style workers (SIM_SWARM_SIZE, SIM_SWARM_SPEED)
 
 Usage::
 
@@ -17,6 +18,7 @@ Usage::
     python scripts/simulate_events.py edge_cases
     python scripts/simulate_events.py quick
     python scripts/simulate_events.py teams
+    python scripts/simulate_events.py swarm --session sim_swarm
 
     # Custom session ID
     python scripts/simulate_events.py complex --session my_session_42

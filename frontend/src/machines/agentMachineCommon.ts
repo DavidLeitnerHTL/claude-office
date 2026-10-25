@@ -101,6 +101,15 @@ export interface AgentMachineActions {
   onOpenElevator: () => void;
   onCloseElevator: () => void;
   onAgentRemoved: (agentId: string) => void;
+  /**
+   * True when the boss queue is too long for a one-by-one handover, so the
+   * agent should walk straight to its desk (arrival) or the elevator
+   * (departure). Optional so lightweight test doubles can omit it.
+   */
+  shouldTakeExpressLane?: (
+    queueType: "arrival" | "departure",
+    agentId: string,
+  ) => boolean;
 }
 
 // ============================================================================

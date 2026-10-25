@@ -7,6 +7,7 @@
 
 import { type ReactNode } from "react";
 import { useControls } from "react-zoom-pan-pinch";
+import { Scan } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export function ZoomControls(): ReactNode {
@@ -31,10 +32,11 @@ export function ZoomControls(): ReactNode {
       </button>
       <button
         onClick={() => resetTransform()}
-        className="w-10 h-10 bg-slate-800/90 hover:bg-slate-700 text-white rounded-lg flex items-center justify-center text-xs font-bold border border-slate-600 shadow-lg active:scale-95 transition-transform"
+        className="w-10 h-10 bg-slate-800/90 hover:bg-slate-700 text-white rounded-lg flex items-center justify-center border border-slate-600 shadow-lg active:scale-95 transition-transform"
         aria-label={t("zoom.reset")}
+        title={t("zoom.reset")}
       >
-        1:1
+        <Scan size={18} strokeWidth={2} />
       </button>
     </div>
   );

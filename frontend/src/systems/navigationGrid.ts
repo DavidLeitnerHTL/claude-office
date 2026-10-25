@@ -6,12 +6,22 @@
  */
 
 import { Position } from "@/types";
+import { CANVAS_HEIGHT } from "@/constants/canvas";
+import {
+  DESK_COLUMN_X,
+  MAX_DESKS,
+  MAX_OFFICE_HEIGHT,
+  deskRowCount,
+  deskRowOriginY,
+} from "@/constants/officeLayout";
 import { ELEVATOR_ZONE } from "./queuePositions";
 
 // Grid configuration
 export const TILE_SIZE = 32;
 export const GRID_WIDTH = 40; // 1280 / 32
-export const GRID_HEIGHT = 32; // 1024 / 32
+// Sized for the tallest office (annex desk rows below the boss area); rows
+// below the current office height are walled off via setOfficeHeight().
+export const GRID_HEIGHT = Math.ceil(MAX_OFFICE_HEIGHT / TILE_SIZE);
 
 // Tile types for pathfinding
 export enum TileType {
@@ -38,19 +48,12 @@ export const TILE_COSTS: Record<TileType, number> = {
 const OBSTACLE_PADDING = 15;
 
 const WALL_Y_END = 232 + OBSTACLE_PADDING; // Wall visual end + padding (one extra row)
-// Desk obstacles cover the desk SURFACE with padding
-// Chair positions (y=400, y=592) left walkable as destinations
-// Row 0: chair at y=400, desk surface at 440-520 (center 480 = 15*32)
-// Top row removed (+32) to allow agents to walk closer to desks
-const DESK_ROW_0_Y = 488 - OBSTACLE_PADDING; // Top of desk row 0 with padding
-const DESK_ROW_0_Y_END = 536 + OBSTACLE_PADDING; // Bottom of desk row 0 with padding
-// Row 1: chair at y=592, desk surface at 632-712 (center 672 = 21*32)
-const DESK_ROW_1_Y = 680 - OBSTACLE_PADDING; // Top of desk row 1 with padding
-const DESK_ROW_1_Y_END = 728 + OBSTACLE_PADDING; // Bottom of desk row 1 with padding
-// Grid-aligned X positions: 256, 512, 768, 1024 (all multiples of 32)
-const DESK_X_POSITIONS = [256, 512, 768, 1024]; // Center X of each desk column
+// Desk obstacles cover the desk SURFACE with padding; chairs stay walkable
+// as destinations. The surface spans origin+80 .. origin+128 (row 0: 488-536,
+// one tile trimmed off the top so agents can walk closer to desks).
+const DESK_SURFACE_TOP = 80;
+const DESK_SURFACE_BOTTOM = 128;
 const DESK_HALF_WIDTH = 70 + OBSTACLE_PADDING; // Desk visual half-width + padding
-// Desk half height matches the calculated deskHalfH in initializeStaticGrid
 
 // Elevator bounds derived from ELEVATOR_ZONE (single source of truth)
 const ELEVATOR_X = (ELEVATOR_ZONE.minX + ELEVATOR_ZONE.maxX) / 2; // 76
@@ -106,9 +109,20 @@ export interface DynamicObstacle {
 export class NavigationGrid {
   private staticGrid: Uint8Array;
   private dynamicObstacles: Map<string, DynamicObstacle> = new Map();
+  private officeHeight = CANVAS_HEIGHT;
 
   constructor() {
     this.staticGrid = new Uint8Array(GRID_WIDTH * GRID_HEIGHT);
+    this.initializeStaticGrid();
+  }
+
+  /**
+   * Match the walkable area to the rendered office height. Everything below
+   * it is wall, so paths never leave the visible floor.
+   */
+  setOfficeHeight(height: number): void {
+    if (height === this.officeHeight) return;
+    this.officeHeight = height;
     this.initializeStaticGrid();
   }
 
@@ -144,23 +158,16 @@ export class NavigationGrid {
       }
     }
 
-    // Mark desks as obstacles
-    for (let row = 0; row < 2; row++) {
-      const deskY =
-        row === 0
-          ? (DESK_ROW_0_Y + DESK_ROW_0_Y_END) / 2
-          : (DESK_ROW_1_Y + DESK_ROW_1_Y_END) / 2;
-      const deskHalfH =
-        row === 0
-          ? (DESK_ROW_0_Y_END - DESK_ROW_0_Y) / 2
-          : (DESK_ROW_1_Y_END - DESK_ROW_1_Y) / 2;
-
-      for (const deskX of DESK_X_POSITIONS) {
+    // Mark desks as obstacles (every possible row; rows below the office
+    // height are walled off at the end anyway)
+    for (let row = 0; row < deskRowCount(MAX_DESKS); row++) {
+      const origin = deskRowOriginY(row);
+      for (const deskX of DESK_COLUMN_X) {
         this.markRectangle(
           deskX - DESK_HALF_WIDTH,
-          deskY - deskHalfH,
+          origin + DESK_SURFACE_TOP - OBSTACLE_PADDING,
           deskX + DESK_HALF_WIDTH,
-          deskY + deskHalfH,
+          origin + DESK_SURFACE_BOTTOM + OBSTACLE_PADDING,
           TileType.DESK,
         );
       }
@@ -192,6 +199,17 @@ export class NavigationGrid {
       TRASH_CAN_Y + TRASH_CAN_HALF_HEIGHT,
       TileType.WALL, // Use WALL type for impassable
     );
+
+    // Wall off everything below the current office height
+    for (
+      let gy = Math.ceil(this.officeHeight / TILE_SIZE);
+      gy < GRID_HEIGHT;
+      gy++
+    ) {
+      for (let gx = 0; gx < GRID_WIDTH; gx++) {
+        this.setTile(gx, gy, TileType.WALL);
+      }
+    }
   }
 
   /**

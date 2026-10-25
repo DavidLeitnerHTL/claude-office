@@ -28,6 +28,8 @@ const WALL_TRIM_COLOR = 0x4a4a4a;
 
 interface OfficeBackgroundProps {
   floorTileTexture?: Texture | null;
+  /** Canvas height; grows when desk rows are added below the boss area. */
+  height?: number;
 }
 
 interface TileData {
@@ -48,11 +50,11 @@ const TILE_TINT_DARK = 0xd8d8d8; // Slightly darker
 /**
  * Draws the office walls (no floor - that's handled by sprites).
  */
-function drawWalls(g: Graphics): void {
+function drawWalls(g: Graphics, height: number): void {
   g.clear();
 
   // Main floor background (fallback color behind tiles)
-  g.rect(0, WALL_HEIGHT, CANVAS_WIDTH, CANVAS_HEIGHT - WALL_HEIGHT);
+  g.rect(0, WALL_HEIGHT, CANVAS_WIDTH, height - WALL_HEIGHT);
   g.fill(FLOOR_COLOR);
 
   // Wall
@@ -70,13 +72,14 @@ function drawWalls(g: Graphics): void {
 
 export function OfficeBackground({
   floorTileTexture,
+  height = CANVAS_HEIGHT,
 }: OfficeBackgroundProps): ReactNode {
   // Generate tile positions with alternating rotations and tints
   const tiles = useMemo(() => {
     const result: TileData[] = [];
     const startY = WALL_HEIGHT;
 
-    for (let y = startY; y < CANVAS_HEIGHT; y += FLOOR_TILE_SIZE) {
+    for (let y = startY; y < height; y += FLOOR_TILE_SIZE) {
       const rowIndex = Math.floor((y - startY) / FLOOR_TILE_SIZE);
       for (let x = 0; x < CANVAS_WIDTH; x += FLOOR_TILE_SIZE) {
         const colIndex = Math.floor(x / FLOOR_TILE_SIZE);
@@ -91,10 +94,13 @@ export function OfficeBackground({
       }
     }
     return result;
-  }, []);
+  }, [height]);
 
   // Stable reference for wall drawing
-  const drawWallsCallback = useCallback((g: Graphics) => drawWalls(g), []);
+  const drawWallsCallback = useCallback(
+    (g: Graphics) => drawWalls(g, height),
+    [height],
+  );
 
   return (
     <>

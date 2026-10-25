@@ -7,11 +7,13 @@
  * Arrival Flow:
  *   spawn → arriving → in_arrival_queue → walking_to_ready → conversing
  *         → walking_to_boss → at_boss → walking_to_desk → idle
+ *   (express lane when the queue is long: spawn → walking_to_desk → idle)
  *
  * Departure Flow:
  *   idle → departing → in_departure_queue → walking_to_ready → conversing
  *        → walking_to_boss → at_boss → walking_to_elevator → in_elevator
  *        → waiting_for_door_close → elevator_closing → removed
+ *   (express lane when the queue is long: idle → walking_to_elevator → …)
  *
  * Implementation is split across:
  *   - agentMachineCommon.ts  — shared types, actions, guards, delays
@@ -70,7 +72,13 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
         conversationStep: 0,
       }),
     },
-    guards: sharedGuards,
+    guards: {
+      ...sharedGuards,
+      expressArrival: ({ context }) =>
+        actions.shouldTakeExpressLane?.("arrival", context.agentId) ?? false,
+      expressDeparture: ({ context }) =>
+        actions.shouldTakeExpressLane?.("departure", context.agentId) ?? false,
+    },
     delays: sharedDelays,
   }).createMachine({
     id: "agent",
@@ -92,7 +100,7 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
         entry: [{ type: "notifyPhaseChange", params: { phase: "idle" } }],
         on: {
           REMOVE: {
-            target: "departure.departing",
+            target: "departure",
             actions: ["setQueueTypeDeparture"],
           },
         },
@@ -102,8 +110,33 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
       // ARRIVAL FLOW — New agent joining the office
       // ======================================================================
       arrival: {
-        initial: "arriving",
+        initial: "entering",
         states: {
+          // Large swarms skip the one-by-one handover at the boss desk;
+          // otherwise dozens of agents would queue for minutes.
+          entering: {
+            always: [
+              { guard: "expressArrival", target: "express_to_desk" },
+              { target: "arriving" },
+            ],
+          },
+
+          express_to_desk: {
+            entry: [
+              {
+                type: "notifyPhaseChange",
+                params: { phase: "walking_to_desk" },
+              },
+              "clearQueueType",
+              "openElevator",
+              "startWalkingToDesk",
+            ],
+            exit: ["closeElevator"],
+            on: {
+              ARRIVED_AT_DESK: "#agent.idle",
+            },
+          },
+
           arriving: {
             entry: [
               { type: "notifyPhaseChange", params: { phase: "arriving" } },
@@ -230,8 +263,31 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
       // DEPARTURE FLOW — Agent leaving the office
       // ======================================================================
       departure: {
-        initial: "departing",
+        initial: "leaving",
         states: {
+          leaving: {
+            always: [
+              { guard: "expressDeparture", target: "express_to_elevator" },
+              { target: "departing" },
+            ],
+          },
+
+          express_to_elevator: {
+            entry: [
+              {
+                type: "notifyPhaseChange",
+                params: { phase: "walking_to_elevator" },
+              },
+              "clearQueueType",
+              "showFarewellBubble",
+              "openElevator",
+              "startWalkingToElevator",
+            ],
+            on: {
+              ARRIVED_AT_ELEVATOR: "in_elevator",
+            },
+          },
+
           departing: {
             entry: [
               { type: "notifyPhaseChange", params: { phase: "departing" } },
@@ -388,7 +444,7 @@ export const createAgentMachine = (actions: AgentMachineActions) =>
     on: {
       // Normal spawn — start arrival flow from elevator
       SPAWN: {
-        target: ".arrival.arriving",
+        target: ".arrival",
         actions: assign({
           agentId: ({ event }) => event.agentId,
           agentName: ({ event }) => event.name,

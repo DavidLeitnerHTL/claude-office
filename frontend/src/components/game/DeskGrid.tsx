@@ -10,6 +10,7 @@
 import { type ReactNode, useMemo } from "react";
 import { Texture } from "pixi.js";
 import { DeskMarquee } from "./DeskMarquee";
+import { deskOrigin } from "@/constants/officeLayout";
 
 // ============================================================================
 // TYPES
@@ -35,13 +36,6 @@ type DeskItem =
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-// Desk grid layout
-const ROW_SIZE = 4;
-const DESK_START_X = 256;
-const DESK_START_Y = 408;
-const DESK_SPACING_X = 256;
-const DESK_SPACING_Y = 192;
 
 // Different colors for desk accessories (tinted onto grayscale sprites)
 const ACCESSORY_TINTS = [
@@ -95,16 +89,9 @@ export function useDeskPositions(
     const result: DeskPosition[] = [];
 
     for (let i = 0; i < deskCount; i++) {
-      const row = Math.floor(i / ROW_SIZE);
-      const col = i % ROW_SIZE;
-      // Grid-aligned positions: X at multiples of 32 (256, 512, 768, 1024)
-      // Y spacing of 192 (6×32) ensures desk centers align to grid
-      const x = DESK_START_X + col * DESK_SPACING_X;
-      const y = DESK_START_Y + row * DESK_SPACING_Y;
       const deskNum = i + 1;
-      const isEmpty = !occupiedDesks.has(deskNum);
-
-      result.push({ x, y, isEmpty });
+      const { x, y } = deskOrigin(deskNum);
+      result.push({ x, y, isEmpty: !occupiedDesks.has(deskNum) });
     }
 
     return result;

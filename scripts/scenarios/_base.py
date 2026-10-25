@@ -13,6 +13,12 @@ from datetime import UTC, datetime
 import requests
 
 API_URL = os.environ.get("CLAUDE_OFFICE_API_URL", "http://localhost:8000/api/v1/events")
+# Required when the backend runs with an explicit CLAUDE_OFFICE_API_KEY.
+API_HEADERS = (
+    {"X-API-Key": os.environ["CLAUDE_OFFICE_API_KEY"]}
+    if os.environ.get("CLAUDE_OFFICE_API_KEY")
+    else {}
+)
 
 # Context window constants
 MAX_CONTEXT_TOKENS = 200_000
@@ -112,7 +118,7 @@ class SimulationContext:
             "data": data or {},
         }
         try:
-            response = requests.post(API_URL, json=payload, timeout=10)
+            response = requests.post(API_URL, json=payload, headers=API_HEADERS, timeout=10)
             response.raise_for_status()
         except Exception as e:
             self.log(f"Error sending {event_type}: {e}")
@@ -175,8 +181,7 @@ class SimulationContext:
 
         if should_trigger:
             self.log(
-                f"*** COMPACTION TRIGGERED at {utilization:.1%} "
-                f"(>= {COMPACTION_THRESHOLD:.0%}) ***"
+                f"*** COMPACTION TRIGGERED at {utilization:.1%} (>= {COMPACTION_THRESHOLD:.0%}) ***"
             )
             self.send_event("context_compaction", tokens)
             self.log(

@@ -47,11 +47,9 @@ import { useAnimationSystem } from "@/systems/animationSystem";
 import { wireGameRuntime, unwireGameRuntime } from "@/systems/gameRuntime";
 import { useCompactionAnimation } from "@/systems/compactionAnimation";
 import { useOfficeTextures } from "@/hooks/useOfficeTextures";
-import {
-  CANVAS_WIDTH,
-  CANVAS_HEIGHT,
-  BACKGROUND_COLOR,
-} from "@/constants/canvas";
+import { CANVAS_WIDTH, BACKGROUND_COLOR } from "@/constants/canvas";
+import { officeHeight, visibleDeskCount } from "@/constants/officeLayout";
+import { getNavigationGrid } from "@/systems/navigationGrid";
 import {
   EMPLOYEE_OF_MONTH_POSITION,
   CITY_WINDOW_POSITION,
@@ -65,8 +63,6 @@ import {
   PLANT_POSITION,
   BOSS_RUG_POSITION,
   TRASH_CAN_OFFSET,
-  DESKS_PER_ROW,
-  MIN_DESK_COUNT,
 } from "@/constants/positions";
 import {
   AgentSprite,
@@ -264,13 +260,33 @@ export function OfficeGame(): ReactNode {
     return tasks;
   }, [agents]);
 
-  // Desk count
-  const deskCount = useMemo(() => {
-    return Math.max(
-      MIN_DESK_COUNT,
-      Math.ceil(agents.size / DESKS_PER_ROW) * DESKS_PER_ROW,
-    );
-  }, [agents.size]);
+  // Desk count: whole rows covering every agent and every assigned desk.
+  const highestDesk = useMemo(() => {
+    let highest = 0;
+    for (const agent of agents.values()) {
+      highest = Math.max(highest, agent.desk ?? 0);
+    }
+    return highest;
+  }, [agents]);
+  const deskCount = visibleDeskCount(agents.size, highestDesk);
+
+  // The canvas grows downward with annex desk rows; CSS object-fit scales it
+  // back into view, so every agent stays visible ("zoom to fit").
+  const canvasHeight = officeHeight(deskCount);
+  const resizeRenderer = useCallback(
+    (app: PixiApplication | null) => {
+      // The Application's height prop only applies at init; resize explicitly.
+      if (app?.renderer && app.renderer.height !== canvasHeight) {
+        app.renderer.resize(CANVAS_WIDTH, canvasHeight);
+      }
+    },
+    [canvasHeight],
+  );
+  useEffect(() => {
+    getNavigationGrid().setOfficeHeight(canvasHeight);
+    resizeRenderer(appRef.current);
+    transformRef.current?.resetTransform(0);
+  }, [canvasHeight, resizeRenderer]);
 
   // Desk positions for Y-sorted rendering
   const deskPositions = useDeskPositions(deskCount, occupiedDesks);
@@ -342,7 +358,7 @@ export function OfficeGame(): ReactNode {
             <Application
               key={`pixi-app-${hmrVersion}`}
               width={CANVAS_WIDTH}
-              height={CANVAS_HEIGHT}
+              height={canvasHeight}
               backgroundColor={BACKGROUND_COLOR}
               autoDensity={true}
               resolution={
@@ -350,6 +366,7 @@ export function OfficeGame(): ReactNode {
               }
               onInit={(app) => {
                 appRef.current = app;
+                resizeRenderer(app);
               }}
             >
               {/* Loading screen - shown while sprites are loading */}
@@ -359,7 +376,10 @@ export function OfficeGame(): ReactNode {
               {spritesLoaded && (
                 <>
                   {/* Floor and walls */}
-                  <OfficeBackground floorTileTexture={textures.floorTile} />
+                  <OfficeBackground
+                    floorTileTexture={textures.floorTile}
+                    height={canvasHeight}
+                  />
 
                   {/* Boss area rug - rendered right after floor */}
                   {textures.bossRug && (

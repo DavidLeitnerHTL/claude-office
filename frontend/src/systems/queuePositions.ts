@@ -11,7 +11,7 @@
  */
 
 import { Position } from "@/types";
-import { DESKS_PER_ROW } from "@/constants/positions";
+import { deskSeatPosition } from "@/constants/officeLayout";
 
 // Boss desk positions (where agents stand IN FRONT of the desk)
 // Boss desk center at y:928 (grid-aligned 29*32)
@@ -219,24 +219,10 @@ export function calculateQueueSlots(
 }
 
 /**
- * Get desk position for a given desk number (1-indexed)
- * Returns the position where agent BOTTOM CIRCLE CENTER should be placed.
- * The bottom circle center is 22px above the feet, 18px below body center.
- * Must match DeskGrid rendering in OfficeGameV2.tsx
- * Grid-aligned: X at multiples of 32, row spacing 192 (6×32)
+ * Get desk position for a given desk number (1-indexed): where the agent's
+ * bottom circle centre sits on the chair. Geometry lives in
+ * `constants/officeLayout.ts`.
  */
 export function getDeskPosition(deskNum: number): Position {
-  const rowSize = DESKS_PER_ROW;
-  const index = deskNum - 1;
-  const row = Math.floor(index / rowSize);
-  const col = index % rowSize;
-  // Grid-aligned positions: 256, 512, 768, 1024
-  const xStart = 256;
-  // Chair center is at desk origin (408) + 30 = 438
-  // Agent body center should be 24px above chair (like boss): 438 - 24 = 414
-  // Agent bottom circle center is 18px below body center: 414 + 18 = 432
-  return {
-    x: xStart + col * 256,
-    y: 432 + row * 192, // Agent bottom circle center for proper chair seating
-  };
+  return deskSeatPosition(deskNum);
 }

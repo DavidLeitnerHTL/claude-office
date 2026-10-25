@@ -34,6 +34,9 @@ import {
   getElevatorPathTarget,
 } from "./positionHelpers";
 
+/** Agents already waiting for the boss before newcomers take the express lane. */
+export const EXPRESS_LANE_THRESHOLD = 3;
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -88,6 +91,7 @@ class AgentMachineService implements AnimationListener {
       onOpenElevator: this.handleOpenElevator.bind(this),
       onCloseElevator: this.handleCloseElevator.bind(this),
       onAgentRemoved: this.handleAgentRemoved.bind(this),
+      shouldTakeExpressLane: this.shouldTakeExpressLane.bind(this),
     };
   }
 
@@ -616,6 +620,25 @@ class AgentMachineService implements AnimationListener {
     if (by === null) {
       this.defer(() => this.notifyBossAvailable());
     }
+  }
+
+  /**
+   * Express lane: once EXPRESS_LANE_THRESHOLD agents are already waiting for
+   * (or walking to) a boss queue, newcomers skip the handover conversation.
+   */
+  private shouldTakeExpressLane(
+    queueType: "arrival" | "departure",
+    agentId: string,
+  ): boolean {
+    const store = useGameStore.getState();
+    const queue =
+      queueType === "arrival" ? store.arrivalQueue : store.departureQueue;
+    const walkingPhase = queueType === "arrival" ? "arriving" : "departing";
+    let waiting = queue.length;
+    for (const agent of store.agents.values()) {
+      if (agent.id !== agentId && agent.phase === walkingPhase) waiting++;
+    }
+    return waiting >= EXPRESS_LANE_THRESHOLD;
   }
 
   private handleOpenElevator(): void {
